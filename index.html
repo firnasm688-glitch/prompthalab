@@ -369,7 +369,11 @@
                 navigateTo('home');
             } catch (err) {
                 console.error("Error uploading to database:", err);
-                alert("Database upload failed. Check your Supabase configuration.");
+                alert("Upload Failed!\n\n" + 
+                      "Message: " + (err.message || "No message") + "\n" +
+                      "Details: " + (err.details || "None") + "\n" +
+                      "Hint: " + (err.hint || "None") + "\n" +
+                      "Code: " + (err.code || "None"));
             }
         }
 
