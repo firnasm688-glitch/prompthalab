@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prompt Hack Lab - Download Prompts</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS CDN Library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0f19;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2937;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+    </style>
+</head>
+<body class="bg-[#0b0f19] text-gray-100 min-h-screen flex flex-col font-sans">
+
+    <!-- NAVIGATION BAR -->
+    <nav class="border-b border-gray-800 bg-[#0f172a] sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2 cursor-pointer" onclick="navigateTo('home')">
+                    <span class="text-emerald-400 text-2xl font-black"><i class="fa-solid fa-terminal mr-2"></i>PROMPT HACK LAB</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="navigateTo('home')" class="text-gray-300 hover:text-emerald-400 px-3 py-2 rounded-md text-sm font-medium transition">Browse</button>
+                    
+                    <!-- ADMIN ONLY BUTTON: Hidden by default -->
+                    <button id="admin-upload-nav" onclick="navigateTo('upload')" class="hidden bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Upload Prompt
+                    </button>
+                    
+                    <!-- Admin status indicator -->
+                    <button id="admin-logout-btn" onclick="logoutAdmin()" class="hidden text-xs text-red-400 border border-red-500/20 bg-red-500/10 px-2.5 py-1 rounded hover:bg-red-500/20 transition">
+                        Logout Admin
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- ================= BROWSE / HOME VIEW ================= -->
+        <section id="view-home" class="view-section">
+            <div class="text-center max-w-2xl mx-auto mb-10">
+                <h1 class="text-4xl font-extrabold tracking-tight sm:text-5xl bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                    Unlock Premium AI Prompts
+                </h1>
+                <p class="mt-3 text-lg text-gray-400">
+                    Discover, copy, and download optimized files and guides for ChatGPT, Midjourney, Claude, and more.
+                </p>
+                
+                <!-- Search and Filters -->
+                <div class="mt-8 flex flex-col sm:flex-row gap-3">
+                    <div class="relative flex-grow">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                        <input type="text" id="search-input" oninput="filterPrompts()" placeholder="Search prompts..." class="w-full pl-10 pr-4 py-3 bg-[#131b2e] border border-gray-800 rounded-xl focus:outline-none focus:border-emerald-500 text-gray-100 placeholder-gray-500 transition">
+                    </div>
+                    <select id="category-filter" onchange="filterPrompts()" class="bg-[#131b2e] border border-gray-800 rounded-xl px-4 py-3 focus:outline-none focus:border-emerald-500 text-gray-300 cursor-pointer">
+                        <option value="All">All Categories</option>
+                        <option value="ChatGPT">ChatGPT</option>
+                        <option value="Midjourney">Midjourney</option>
+                        <option value="Claude">Claude</option>
+                        <option value="Stable Diffusion">Stable Diffusion</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Prompts Grid -->
+            <div id="prompts-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Rendered dynamically -->
+            </div>
+        </section>
+
+        <!-- ================= UPLOAD VIEW ================= -->
+        <section id="view-upload" class="view-section hidden max-w-xl mx-auto">
+            <div class="bg-[#0f172a] border border-gray-800 rounded-2xl p-6 sm:p-8">
+                <h2 class="text-2xl font-bold text-gray-100 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-cloud-arrow-up text-emerald-400"></i> Upload New Prompt
+                </h2>
+                <p class="text-gray-400 text-sm mb-6">Fill in the details below to add a prompt resources. This will write to your cloud database instantly.</p>
+
+                <form id="upload-form" onsubmit="handleUpload(event)" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Prompt Title</label>
+                        <input type="text" id="upload-title" required placeholder="e.g., Ultra-Realistic Cinematic Midjourney Prompt" class="w-full px-4 py-2.5 bg-[#131b2e] border border-gray-800 rounded-lg focus:outline-none focus:border-emerald-500 text-gray-100 placeholder-gray-600 transition">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">Category</label>
+                            <select id="upload-category" required class="w-full px-4 py-2.5 bg-[#131b2e] border border-gray-800 rounded-lg focus:outline-none focus:border-emerald-500 text-gray-300 transition">
+                                <option value="ChatGPT">ChatGPT</option>
+                                <option value="Midjourney">Midjourney</option>
+                                <option value="Claude">Claude</option>
+                                <option value="Stable Diffusion">Stable Diffusion</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-400 mb-1">File Type / Format</label>
+                            <input type="text" id="upload-format" placeholder="e.g., PDF, TXT, JSON" class="w-full px-4 py-2.5 bg-[#131b2e] border border-gray-800 rounded-lg focus:outline-none focus:border-emerald-500 text-gray-100 placeholder-gray-600 transition">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Description / Prompt Text Preview</label>
+                        <textarea id="upload-desc" rows="4" required placeholder="Write a short description or paste a snippet of the prompt..." class="w-full px-4 py-2.5 bg-[#131b2e] border border-gray-800 rounded-lg focus:outline-none focus:border-emerald-500 text-gray-100 placeholder-gray-600 transition resize-none"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-1">Download URL (Google Drive / Mega / Dropbox)</label>
+                        <input type="url" id="upload-url" required placeholder="https://drive.google.com/file/d/..." class="w-full px-4 py-2.5 bg-[#131b2e] border border-gray-800 rounded-lg focus:outline-none focus:border-emerald-500 text-gray-100 placeholder-gray-600 transition">
+                    </div>
+
+                    <div class="flex gap-3 pt-2">
+                        <button type="button" onclick="navigateTo('home')" class="w-1/2 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg transition">Cancel</button>
+                        <button type="submit" class="w-1/2 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-lg transition">Publish Prompt</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- ================= REDIRECT / DOWNLOAD COUNTDOWN VIEW ================= -->
+        <section id="view-redirect" class="view-section hidden max-w-xl mx-auto py-12">
+            <div class="bg-[#0f172a] border border-gray-800 rounded-2xl p-8 text-center space-y-6">
+                <div class="flex justify-center">
+                    <div class="relative w-24 h-24">
+                        <div class="absolute inset-0 border-4 border-gray-800 rounded-full"></div>
+                        <div class="absolute inset-0 border-4 border-t-emerald-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                        <div class="absolute inset-0 flex items-center justify-center text-3xl font-bold text-emerald-400" id="countdown-timer">5</div>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-semibold tracking-wide uppercase">Processing Request</span>
+                    <h2 class="text-2xl font-bold mt-3 text-gray-100">Preparing Your Prompt File</h2>
+                    <p class="text-gray-400 mt-2 text-sm" id="redirecting-filename">Your download link is being secured. Please do not close this window.</p>
+                </div>
+
+                <div class="bg-[#131b2e] p-4 border border-gray-800/80 rounded-xl flex items-center justify-between">
+                    <span class="text-xs text-gray-500 uppercase tracking-wider font-semibold">Safe & Verified File Link</span>
+                    <span class="text-xs font-mono text-emerald-400 bg-emerald-400/5 px-2 py-1 rounded" id="redirect-domain">gdrive</span>
+                </div>
+
+                <div class="space-y-3">
+                    <p class="text-xs text-gray-500">If your download does not start automatically, click the button below:</p>
+                    <a id="manual-download-btn" href="#" target="_blank" class="inline-block w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-lg transition shadow-lg shadow-emerald-500/10">
+                        Download Now <i class="fa-solid fa-arrow-up-right-from-square ml-1.5"></i>
+                    </a>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-gray-800 bg-[#070a12] py-6">
+        <div class="max-w-7xl mx-auto px-4 text-center sm:flex sm:justify-between sm:items-center">
+            <p class="text-xs text-gray-500">&copy; 2026 Prompt Hack Lab. For community optimization purposes.</p>
+            <div class="mt-2 sm:mt-0 flex justify-center gap-4 text-xs text-gray-400">
+                <button onclick="promptAdminLogin()" class="hover:text-emerald-400 transition cursor-pointer">Admin Portal</button>
+                <a href="#" class="hover:text-emerald-400 transition">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- INTERACTIVE SCRIPT -->
+    <script>
+        // ==========================================
+        // 1. DATABASE CONFIGURATION (Insert your Supabase Keys)
+        // ==========================================
+        const SUPABASE_URL = "https://supabase.com/dashboard/project/kuvejhlhkutbqczgvjoy/settings/api-keys"; 
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dmVqaGxoa3V0YnFjemd2am95Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0OTQxNDUsImV4cCI6MjA5ODA3MDE0NX0.lEdl5toEi7PYobQiTHqvbP5V5COawTOBbI3fWiAnMPg"; 
+
+        // ==========================================
+        // 2. CHANGE YOUR ADMIN PASSCODE HERE
+        // ==========================================
+        const ADMIN_PASSCODE = "Firnas1999@"; 
+
+        // Initialize Supabase Client
+        const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        let prompts = [];
+
+        // Fetch Prompts directly from your cloud database
+        async function fetchPromptsFromDatabase() {
+            try {
+                const { data, error } = await _supabase
+                    .from('prompts')
+                    .select('*')
+                    .order('id', { ascending: false });
+
+                if (error) throw error;
+                prompts = data || [];
+                renderPrompts();
+            } catch (err) {
+                console.error("Error loading prompts from database:", err);
+            }
+        }
+
+        // Initialize Admin Session Check
+        function checkAdminSession() {
+            const isAdmin = sessionStorage.getItem('isAdminLoggedIn') === 'true';
+            const uploadBtn = document.getElementById('admin-upload-nav');
+            const logoutBtn = document.getElementById('admin-logout-btn');
+
+            if (isAdmin) {
+                uploadBtn.classList.remove('hidden');
+                logoutBtn.classList.remove('hidden');
+            } else {
+                uploadBtn.classList.add('hidden');
+                logoutBtn.classList.add('hidden');
+            }
+        }
+
+        function promptAdminLogin() {
+            if (sessionStorage.getItem('isAdminLoggedIn') === 'true') {
+                navigateTo('upload');
+                return;
+            }
+
+            const input = prompt("Enter Admin Passcode to Access Upload Panel:");
+            if (input === ADMIN_PASSCODE) {
+                sessionStorage.setItem('isAdminLoggedIn', 'true');
+                alert("Login Successful! Admin features unlocked.");
+                checkAdminSession();
+                navigateTo('upload');
+            } else if (input !== null) {
+                alert("Access Denied: Incorrect Passcode.");
+            }
+        }
+
+        function logoutAdmin() {
+            sessionStorage.removeItem('isAdminLoggedIn');
+            alert("Logged out from Admin Mode.");
+            checkAdminSession();
+            navigateTo('home');
+        }
+
+        function navigateTo(viewId, data = null) {
+            if (viewId === 'upload' && sessionStorage.getItem('isAdminLoggedIn') !== 'true') {
+                alert("Restricted Access: This view requires Admin privileges.");
+                navigateTo('home');
+                return;
+            }
+
+            document.querySelectorAll('.view-section').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            const targetSection = document.getElementById(`view-${viewId}`);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            if (viewId === 'home') {
+                fetchPromptsFromDatabase();
+            } else if (viewId === 'redirect' && data) {
+                startRedirectTimer(data.url, data.title);
+            }
+        }
+
+        // Render cards onto homepage
+        function renderPrompts(filteredList = prompts) {
+            const grid = document.getElementById('prompts-grid');
+            grid.innerHTML = '';
+
+            if (filteredList.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-gray-500">
+                        <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+                        <p>No prompts found in the database. Log in as Admin to add one.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            filteredList.forEach(prompt => {
+                let badgeColor = "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+                if(prompt.category === 'ChatGPT') badgeColor = "bg-green-500/10 text-green-400 border-green-500/20";
+                if(prompt.category === 'Claude') badgeColor = "bg-orange-500/10 text-orange-400 border-orange-500/20";
+                if(prompt.category === 'Midjourney') badgeColor = "bg-purple-500/10 text-purple-400 border-purple-500/20";
+
+                const card = `
+                    <div class="bg-[#0f172a] border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition flex flex-col justify-between h-64 shadow-md">
+                        <div>
+                            <div class="flex items-center justify-between gap-2 mb-3">
+                                <span class="px-2.5 py-0.5 border text-xs font-medium rounded-full ${badgeColor}">
+                                    ${prompt.category}
+                                </span>
+                                <span class="text-xs text-gray-500 font-mono flex items-center gap-1">
+                                    <i class="fa-regular fa-file-code"></i> ${prompt.format || 'Prompt'}
+                                </span>
+                            </div>
+                            <h3 class="font-bold text-gray-200 text-lg line-clamp-1 mb-2">${prompt.title}</h3>
+                            <p class="text-sm text-gray-400 line-clamp-3 mb-4">${prompt.desc_text}</p>
+                        </div>
+                        <div class="flex items-center gap-2 border-t border-gray-800/80 pt-3">
+                            <button onclick="copyPromptText('${prompt.desc_text.replace(/'/g, "\\'")}')" class="flex-1 py-2 bg-gray-800/60 hover:bg-gray-800 text-xs font-semibold text-gray-300 rounded-lg transition flex items-center justify-center gap-1.5">
+                                <i class="fa-regular fa-copy"></i> Copy Preview
+                            </button>
+                            <button onclick="triggerRedirect('${prompt.url}', '${prompt.title}')" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-xs font-bold text-slate-950 rounded-lg transition flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-download"></i> Get File
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += card;
+            });
+        }
+
+        function filterPrompts() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const category = document.getElementById('category-filter').value;
+
+            const filtered = prompts.filter(prompt => {
+                const matchesQuery = prompt.title.toLowerCase().includes(query) || prompt.desc_text.toLowerCase().includes(query);
+                const matchesCategory = category === 'All' || prompt.category === category;
+                return matchesQuery && matchesCategory;
+            });
+
+            renderPrompts(filtered);
+        }
+
+        // Handle form upload directly to Database
+        async function handleUpload(event) {
+            event.preventDefault();
+
+            if (sessionStorage.getItem('isAdminLoggedIn') !== 'true') {
+                alert("Unauthorized action!");
+                return;
+            }
+
+            const title = document.getElementById('upload-title').value;
+            const category = document.getElementById('upload-category').value;
+            const format = document.getElementById('upload-format').value || "Prompt File";
+            const desc_text = document.getElementById('upload-desc').value;
+            const url = document.getElementById('upload-url').value;
+
+            try {
+                // Insert into Supabase table
+                const { error } = await _supabase
+                    .from('prompts')
+                    .insert([{ title, category, format, desc_text, url }]);
+
+                if (error) throw error;
+
+                alert("Prompt uploaded and published globally!");
+                document.getElementById('upload-form').reset();
+                navigateTo('home');
+            } catch (err) {
+                console.error("Error uploading to database:", err);
+                alert("Database upload failed. Check your Supabase configuration.");
+            }
+        }
+
+        function copyPromptText(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert("Prompt text copied to clipboard!");
+            }).catch(err => {
+                console.error("Could not copy text: ", err);
+            });
+        }
+
+        function triggerRedirect(url, title) {
+            navigateTo('redirect', { url, title });
+        }
+
+        let countdownInterval;
+        function startRedirectTimer(targetUrl, title) {
+            clearInterval(countdownInterval);
+
+            const timerElement = document.getElementById('countdown-timer');
+            const manualButton = document.getElementById('manual-download-btn');
+            const filenameElement = document.getElementById('redirecting-filename');
+            const domainElement = document.getElementById('redirect-domain');
+
+            filenameElement.innerText = `Preparing prompt file: "${title}"`;
+            manualButton.href = targetUrl;
+
+            try {
+                const parsedUrl = new URL(targetUrl);
+                domainElement.innerText = parsedUrl.hostname;
+            } catch(e) {
+                domainElement.innerText = "External Secure Server";
+            }
+
+            let timeLeft = 5;
+            timerElement.innerText = timeLeft;
+
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                timerElement.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    window.open(targetUrl, '_blank');
+                    navigateTo('home');
+                }
+            }, 1000);
+        }
+
+        window.onload = () => {
+            checkAdminSession();
+            fetchPromptsFromDatabase();
+        };
+    </script>
+</body>
+</html>
